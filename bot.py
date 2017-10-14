@@ -5,7 +5,8 @@ import json, logging, requests, time, urllib
 from bs4 import BeautifulSoup
 from lxml import html
 import urllib.request
-
+import gensim, logging
+import time 
 url = 'http://www.straitstimes.com/tags/fake-news?page={}'
 base_url = 'http://www.straitstimes.com'
 
@@ -19,6 +20,37 @@ for page in range(1,3):
 
 print(fake_news)
 
+
+# Rehurek, R.
+# 2014, February 2
+# Word2Vec Tutorial
+# https://rare-technologies.com/word2vec-tutorial/
+logging.basicConfig(format = '%(asctime)s : %(levelname)s : %(message)s', \
+    level = logging.INFO)
+
+# McCormick, C.
+# 2016, April 12
+# Google's trained Word2Vec model in Python
+# http://mccormickml.com/2016/04/12/googles-pretrained-word2vec-model-in-python/
+start = time.time()
+model = gensim.models.KeyedVectors.load_word2vec_format( \
+    './GoogleNews-vectors-negative300.bin', binary = True)
+inter = time.time()
+print("TIME TO LOAD MODEL: %f" % (inter - start))
+
+def getSimilarity(text0, text1):
+    splittext0 = ''.join(ch for ch in text0 if ch.isalnum() or ch.isspace()).split()
+    splittext1 = ''.join(ch for ch in text1 if ch.isalnum() or ch.isspace()).split()
+    return model.n_similarity(splittext0, splittext1)
+
+def getArticleScores(text):
+    scores = {}
+    for key in fake_news:
+        scores[key] = getSimilarity(text, key)
+        print(key + ' : ' + str(scores[key]))
+    return scores
+
+print(str(getArticleScores("Vivian Balakrishnan")))
 
 # See https://docs.python.org/3/library/logging.html#logging.basicConfig for basicConfig options and
 # https://docs.python.org/3/library/logging.html#logrecord-attributes for format options
@@ -77,7 +109,9 @@ def handle_updates(updates, latest_update_id):
 
             # Handle cases here
             print(str(chat) + " :: " + text)
-            send_message(str(fake_news), chat)
+            send_message('received!', chat)
+            article_scores = getSimilarity(text, "Vivian Balakrishnan collapses at the UN")
+            print(str(article_scores))
         except KeyError:
             pass
 

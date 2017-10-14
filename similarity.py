@@ -1,4 +1,4 @@
-import gensim, logging, parse
+import gensim, logging
 # import time
 
 # Rehurek, R.

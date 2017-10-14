@@ -2,23 +2,20 @@
 # Building a Chatbot using Telegram and Python (Part 1) by Gareth Dwyer
 
 import json, logging, requests, time, urllib
+from bisect import bisect
 from db_helper import DBHelper
 
 # See https://docs.python.org/3/library/logging.html#logging.basicConfig for basicConfig options and
 # https://docs.python.org/3/library/logging.html#logrecord-attributes for format options
 logging.basicConfig(filename = 'bot.log', format = "%(asctime)s %(levelname)s %(message)s", level = logging.INFO)
 
-# Initialise database
 db = DBHelper()
 
-# Read bot token file and retrieve token (secret)
 with open('token.txt', 'r') as f:
     bot_token = f.readline().strip()
 
-# Define bot URL
 base_url = 'https://api.telegram.org/bot{}'.format(bot_token)
 
-# Load the file of bot reply messages into memory
 replies = {}
 with open('replies.txt', 'r') as m:
     num_lines, command = m.readline().strip().split(' ')
@@ -32,7 +29,6 @@ with open('replies.txt', 'r') as m:
 logging.info("Reply messages loaded into memory")
 logging.info("Reply messages: %s", replies)
 
-# Load the file of blacklisted senders into memory
 blacklisted = {}
 with open('blacklisted.txt', 'r') as f:
     num_blacklisted = f.readline().strip()
@@ -45,34 +41,21 @@ with open('blacklisted.txt', 'r') as f:
             blacklisted[offender] = 1
 logging.info("Blacklisted senders loaded into memory")
 
-# Data structures for monitoring reporting senders, answers, and timeouts
 reporting = {}
 reporters_dict = {}
 reporters_list = []
 last_submitted_times = []
 logging.info("Data structures loaded into memory")
 
-# Response timeouts
+# TODO: Remove idle reporters
 timeout_oth = 300
-timeout_ask = 10
+timeout_ask = 180
 logging.info("Response timeouts loaded into memory")
 
-# List indices for reporting.values()
-index_chat_id = 0
-index_last_answered = 1
-index_num_answered = 2
-index_answers = 3
-
-# Constants for data validation
 min_ans_len = 10
 max_ans_len = 70
-
-# Number of questions
 num_questions = len(replies['questions'])
-
-# Time between reports for each sender
 report_cooldown = 60
-
 logging.info("Other variables loaded into memory")
 logging.info("Number of questions: %d", num_questions)
 
@@ -122,19 +105,12 @@ def handle_updates(updates, latest_update_id):
                 send_message(replies['invalid'][0], chat)
                 continue
 
-            if text == '/exit':
-                if sender in reporting:
-                    send_message(replies['exit'][1], chat)
-                    reporting.pop(sender)
-                else:
-                    send_message(replies['exit'][0], chat)
-            elif sender in reporting:
+            if sender in reporting:
                 if validate_answer(text):
                     reporting[sender].append(sanitise(text))
-                    reporting[sender][index_last_answered] = int(time.time())
-                    reporting[sender][index_num_answered] += 1
-                    if reporting[sender][index_num_answered] >= num_questions:
-                        answers = reporting[sender][index_answers:]
+                    reporting[sender][0] += 1
+                    if reporting[sender][0] >= num_questions:
+                        answers = reporting[sender][1:]
                         inserted, violations = db.insert(answers)
                         reporting.pop(sender)
                         if inserted:
@@ -170,7 +146,7 @@ def handle_updates(updates, latest_update_id):
                 else:
                     logging.info("handle_updates: /report")
                     send_message(replies[text][0], chat)
-                    mark_sender_as_reporting(sender, chat)
+                    reporting[sender] = [0]
                     send_message(replies['questions'][0], chat)
             elif text == '/view':
                 logging.info("handle_updates: /view")
@@ -192,12 +168,6 @@ def is_recent_reporter(sender_id):
     logging.info("is_recent_reporter: %s returns %r", sender_id, is_recent)
     return is_recent
 
-def mark_sender_as_reporting(sender, chat_id):
-    reporting[sender] = []
-    reporting[sender][index_chat_id] = chat_id
-    reporting[sender][index_last_answered] = int(time.time())
-    reporting[sender][index_num_answered] = 0
-
 def validate_answer(ans):
     ans_length = len(ans)
     too_long = ans_length > max_ans_len
@@ -214,12 +184,6 @@ def sanitise(ans):
 
 def main():
     db.create_table()
-    proc_has_updates = Process(target = poll)
-    proc_has_timeout = Process(target = kill)
-    proc_has_updates.start()
-    proc_has_timeout.start()
-
-def poll():
     latest_update_id = None
     while True:
         updates = get_updates(timeout_oth, latest_update_id)
@@ -227,14 +191,6 @@ def poll():
             latest_update_id = get_latest_update_id(updates) + 1
             handle_updates(updates, latest_update_id)
         time.sleep(1)
-
-def kill():
-    while True:
-        for sender in reporting:
-            if int(time.time()) - reporting[sender][index_last_answered] > timeout_ask:
-                send_message(replies['kill'], reporting[sender][index_chat_id])
-                reporting.pop(sender)
-            time.sleep(1)
 
 if __name__ == '__main__':
     main()

@@ -73,15 +73,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-'''
-from bs4 import BeautifulSoup
-from lxml import html
-import urllib.request
-
-url = 'http://www.straitstimes.com/tags/fake-news?page={}'
-
-page = 1
-text = html.fromstring(urllib.request.urlopen(url.format(page)).read())
-soup = BeautifulSoup(text, 'lxml')
-'''

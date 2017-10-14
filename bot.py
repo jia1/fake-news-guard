@@ -11,7 +11,7 @@ base_url = 'http://www.straitstimes.com'
 
 fake_news = {}
 
-for page in range(1,10):
+for page in range(1,3):
     text = urllib.request.urlopen(url.format(page)).read()
     soup = BeautifulSoup(text, 'lxml')
     for line in soup.select('.story-headline > a'):
@@ -76,6 +76,8 @@ def handle_updates(updates, latest_update_id):
                 continue
 
             # Handle cases here
+            print(str(chat) + " :: " + text)
+            send_message(str(fake_news), chat)
         except KeyError:
             pass
 

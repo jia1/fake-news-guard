@@ -2,6 +2,23 @@
 # Building a Chatbot using Telegram and Python (Part 1) by Gareth Dwyer
 
 import json, logging, requests, time, urllib
+from bs4 import BeautifulSoup
+from lxml import html
+import urllib.request
+
+url = 'http://www.straitstimes.com/tags/fake-news?page={}'
+base_url = 'http://www.straitstimes.com'
+
+fake_news = {}
+
+for page in range(1,10):
+    text = urllib.request.urlopen(url.format(page)).read()
+    soup = BeautifulSoup(text, 'lxml')
+    for line in soup.select('.story-headline > a'):
+        fake_news[line.string] = base_url + line['href']
+
+print(fake_news)
+
 
 # See https://docs.python.org/3/library/logging.html#logging.basicConfig for basicConfig options and
 # https://docs.python.org/3/library/logging.html#logrecord-attributes for format options

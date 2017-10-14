@@ -2,14 +2,10 @@
 # Building a Chatbot using Telegram and Python (Part 1) by Gareth Dwyer
 
 import json, logging, requests, time, urllib
-from bisect import bisect
-from db_helper import DBHelper
 
 # See https://docs.python.org/3/library/logging.html#logging.basicConfig for basicConfig options and
 # https://docs.python.org/3/library/logging.html#logrecord-attributes for format options
 logging.basicConfig(filename = 'bot.log', format = "%(asctime)s %(levelname)s %(message)s", level = logging.INFO)
-
-db = DBHelper()
 
 with open('token.txt', 'r') as f:
     bot_token = f.readline().strip()
@@ -67,7 +63,6 @@ def handle_updates(updates, latest_update_id):
             pass
 
 def main():
-    db.create_table()
     latest_update_id = None
     while True:
         updates = get_updates(60, latest_update_id)

@@ -14,7 +14,7 @@ logging.basicConfig(format = '%(asctime)s : %(levelname)s : %(message)s', \
 # http://mccormickml.com/2016/04/12/googles-pretrained-word2vec-model-in-python/
 # start = time.time()
 model = gensim.models.Word2Vec.load_word2vec_format( \
-    './Resources/GoogleNews-vectors-negative300.bin', binary = True)
+    './GoogleNews-vectors-negative300.bin', binary = True)
 # inter = time.time()
 # print("TIME: %f" % (inter - start))
 
